@@ -9,6 +9,10 @@ const client = new Discord.Client();
 const mp3Extension = ".mp3";
 const muteFileName = "mute";
 const argErrorMessage = "File not found, please retry and with another argument";
+const helpMessage = "The following commands are available : \n"
+					+ "**!stop** : Stop playing music\n"
+					+ "**!quit** : Disconnects the bot"
+					;
 
 
 client.login(token);
@@ -24,9 +28,7 @@ client.once('disconnect', () => {
 
 //TODO: commande qui donne des infos sur les musiques possibles
 //TODO: commande qui joue une musique random parmi un theme
-//TODO: help command
 //TODO: bug - message d'erreur ne s'affiche pas quand la musique n'est pas trouvée
-//TODO: !quit command qui fait déconnecter le bot
 
 client.on('message', async message => {
 
@@ -54,6 +56,9 @@ client.on('message', async message => {
 	if (message.content.startsWith(`${prefix}quit`)){
 		message.reply("Ok, I disconnect ...");
 		disconnect(message);
+	}
+	if (message.content.startsWith(`${prefix}help`)){
+		message.reply(helpMessage);
 	}
 })
 
