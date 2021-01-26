@@ -17,11 +17,10 @@ const musicDirectory = "./musics/"
 
 const argErrorMessage = "File not found, please retry and with another argument";
 const helpMessage = "The following commands are available : \n"
-					+ "**!help** : Displays command list and usage\n"
+					+ "**!bardHelp** : Displays command list and usage\n"
 					+ "**!listSongs** : Displays available songs and ids\n"
 					+ "**!play <id>** : Plays the song corresponding to the specified id (once)\n"
 					+ "**!loop <id>** : Loops the song corresponding to the specified id\n"
-					+ "**!clearIds** : Clears songIds file\n"
 					+ "**!listThemes** : Displays available themes\n"
 					+ "**!newTheme <theme name>** : Creates a new theme\n"
 					+ "**!addTheme <song id> <theme name>** : Adds the song to the specified theme\n"
@@ -29,7 +28,6 @@ const helpMessage = "The following commands are available : \n"
 					+ "**!stop** : Stop playing music\n"
 					+ "**!quit** : Disconnects the bot"
 					;
-
 
 client.login(token);
 client.once('ready', () => {
@@ -68,7 +66,7 @@ client.on('message', async message => {
 	if (message.content.startsWith(`${prefix}kobrok`)){
 		message.channel.send("Kobrok is so clever and powerful! Also really handsome! :heart_eyes:");
 	}
-	
+
 	if (message.content.startsWith(`${prefix}play`)){
 		const arg = getArg(message);
 		play(message,arg);
@@ -81,7 +79,7 @@ client.on('message', async message => {
 		message.reply("Ok, I disconnect ...");
 		disconnect(message);
 	}
-	if (message.content.startsWith(`${prefix}help`)){
+	if (message.content.startsWith(`${prefix}bardHelp`)){
 		message.reply(helpMessage);
 	}
 	if (message.content.startsWith(`${prefix}listSongs`)){
@@ -89,9 +87,6 @@ client.on('message', async message => {
 	}
 	if (message.content.startsWith(`${prefix}listThemes`)){
 		listThemes(message);
-	}
-	if (message.content.startsWith(`${prefix}clearIds`)){
-		clearIds();
 	}
 	if (message.content.startsWith(`${prefix}newTheme`)){
 		const arg = getArg(message);
@@ -105,6 +100,7 @@ client.on('message', async message => {
 		loopTheme(message,arg);
 	}else if (message.content.startsWith(`${prefix}loop`)){
 		const arg = getArg(message);
+		message.reply("Looping "+musicIds[arg]);
 		loop(message,arg);
 	}
 })
@@ -128,19 +124,24 @@ function listThemes(message){
 }
 
 function play(message,arg){
-	let music = musicDirectory+musicIds[arg];
-	message.reply("Playing "+musicIds[arg]);
-	message.member.voice.channel.join().then(VoiceConnection => {
+	if(musicIds.hasOwnProperty(arg)){
+		let music = musicDirectory+musicIds[arg];
+		message.reply("Playing "+musicIds[arg]);
+		message.member.voice.channel.join().then(VoiceConnection => {
 			VoiceConnection.play(music).on("finish", () => {VoiceConnection.disconnect()});
     	}).catch(e => {
 			console.log(e);
 			message.channel.send(argErrorMessage);
     	})
+	}else{
+		message.reply("This id doesn't exist :cry:");
+	}
+
+	
 }
 
 function loop(message,arg){
 	let music = musicDirectory+musicIds[arg];
-	message.reply("Looping "+musicIds[arg]);
 	message.member.voice.channel.join().then(VoiceConnection => {
 			VoiceConnection.play(music).on("finish", () => {loop(message,arg)});
     	}).catch(e => {
@@ -162,15 +163,6 @@ function disconnect(message){
 	message.member.voice.channel.join().then(VoiceConnection => {
 			VoiceConnection.disconnect()
     	}).catch(e => console.log(e))
-}
-
-function clearIds(message){
-	fs.writeFile(musicIdsFileName,JSON.stringify(emptyObject, null, "\t"), (err) => {
-    if (err) {
-        throw err;
-    }
-    message.reply("Ids are cleared");
-	});
 }
 
 function newTheme(message,arg){
