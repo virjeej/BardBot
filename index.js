@@ -1,13 +1,20 @@
 const Discord = require('discord.js');
 const fs = require('fs');
-const {prefix,token} = require('./config.json');
-const musicIds = require('./musicIds.json');
 
+const musicIdsFileName = './musicIds.json';
+const themesFileName = './themes.json';
+
+const {prefix,token} = require('./config.json');
+const musicIds = require(musicIdsFileName);
+const themes = require(themesFileName);
+
+const emptyObject = {};
 const client = new Discord.Client();
 
 const mp3Extension = ".mp3";
 const muteFileName = "./mute";
 const musicDirectory = "./musics/"
+
 const argErrorMessage = "File not found, please retry and with another argument";
 const helpMessage = "The following commands are available : \n"
 					+ "**!stop** : Stop playing music\n"
@@ -29,7 +36,6 @@ client.once('disconnect', () => {
 //TODO: gerer l'ajout de nouvelles musiques
 //TODO: commande qui joue une musique random parmi un theme
 
-
 //read musics in directory and give each of them an id
 fs.readdir("./musics/", (err, files) => {
 	let counter = 1;
@@ -38,7 +44,7 @@ fs.readdir("./musics/", (err, files) => {
 	    counter++;
 	});
 	//write songs and their ids to file
-	fs.writeFile('./musicIds.json', JSON.stringify(musicIds), (err) => {
+	fs.writeFile(musicIdsFileName, JSON.stringify(musicIds, null, "\t"), (err) => {
     if (err) {
         throw err;
     }
@@ -59,14 +65,8 @@ client.on('message', async message => {
 	}
 
 	if (message.content.startsWith(`${prefix}play`)){
-		message.reply("Playing ...");
 		const arg = getArg(message);
 		play(message,arg);
-	}
-	if (message.content.startsWith(`${prefix}loop`)){
-		message.reply("Looping ...");
-		const arg = getArg(message);
-		loop(message,arg);
 	}
 	if (message.content.startsWith(`${prefix}stop`)){
 		message.reply("Ok, I stop playing ...");
@@ -82,6 +82,23 @@ client.on('message', async message => {
 	if (message.content.startsWith(`${prefix}list`)){
 		list(message);
 	}
+	if (message.content.startsWith(`${prefix}clearIds`)){
+		clearIds();
+	}
+	if (message.content.startsWith(`${prefix}newTheme`)){
+		const arg = getArg(message);
+		newTheme(message,arg);
+	}
+	if (message.content.startsWith(`${prefix}addTheme`)){
+		addTheme(message);
+	}
+	if (message.content.startsWith(`${prefix}loopTheme`)){
+		const arg = getArg(message);
+		loopTheme(message,arg);
+	}else if (message.content.startsWith(`${prefix}loop`)){
+		const arg = getArg(message);
+		loop(message,arg);
+	}
 })
 
 
@@ -96,6 +113,7 @@ function list(message){
 
 function play(message,arg){
 	let music = musicDirectory+musicIds[arg];
+	message.reply("Playing "+musicIds[arg]);
 	message.member.voice.channel.join().then(VoiceConnection => {
 			VoiceConnection.play(music).on("finish", () => {VoiceConnection.disconnect()});
     	}).catch(e => {
@@ -106,8 +124,9 @@ function play(message,arg){
 
 function loop(message,arg){
 	let music = musicDirectory+musicIds[arg];
+	message.reply("Looping "+musicIds[arg]);
 	message.member.voice.channel.join().then(VoiceConnection => {
-			VoiceConnection.play(title).on("finish", () => {loop(message,arg)});
+			VoiceConnection.play(music).on("finish", () => {loop(message,arg)});
     	}).catch(e => {
 			console.log(e);
 			message.channel.send(argErrorMessage);
@@ -129,8 +148,77 @@ function disconnect(message){
     	}).catch(e => console.log(e))
 }
 
+function clearIds(message){
+	fs.writeFile(musicIdsFileName,JSON.stringify(emptyObject, null, "\t"), (err) => {
+    if (err) {
+        throw err;
+    }
+    message.reply("Ids are cleared");
+	});
+}
+
+function newTheme(message,arg){
+	if(themes.hasOwnProperty(arg)){
+		message.reply("This theme already exists :cry:")
+	}else{
+		themes[arg] = [];
+		fs.writeFile(themesFileName,JSON.stringify(themes, null, "\t"), (err) => {
+    	if (err) {
+        	throw err;
+    	}
+    	message.reply("New theme : "+arg)
+		});
+	}
+}
+
+function addTheme(message){
+	const arg1 = message.content.slice(prefix.length).trim().split(' ')[1];
+	const arg2 = message.content.slice(prefix.length).trim().split(' ')[2];
+	if(themes.hasOwnProperty(arg2)){
+		if(!themes[arg2].includes(musicIds[arg1])){
+			themes[arg2].push(musicIds[arg1]);
+			fs.writeFile(themesFileName,JSON.stringify(themes, null, "\t"), (err) => {
+	    	if (err) {
+	        	throw err;
+	    	}
+	    	message.reply(musicIds[arg1]+" added to theme "+arg2)
+			});
+		}else{
+			message.reply("This song already belongs to theme :cry:")
+		}
+	}else{
+		message.reply("This theme does not exist :cry:")
+	}
+}
+
+function loopTheme(message,arg){
+	if(themes.hasOwnProperty(arg)){
+		let songs = themes[arg];
+		let songIds = [];
+		songs.forEach(song => {
+			let songId = getKeyByValue(musicIds,song);
+			if(songId != null){
+				songIds.push(songId);
+			}
+		});
+		if(songIds.length > 0){
+			let random = Math.floor(Math.random() * songIds.length);
+			let randomMusicId = songIds[random];
+			loop(message,randomMusicId);
+		}else{
+			message.reply("Didn't find any music to play :cry:")
+		}
+	}else{
+		message.reply("This theme does not exist :cry:")
+	}
+}
+
 function getArg(message){
 	const arg = message.content.slice(prefix.length).trim().split(' ')[1];
 	return arg;
+}
+
+function getKeyByValue(object, value) {
+  return Object.keys(object).find(key => object[key] === value);
 }
 
