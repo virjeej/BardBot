@@ -1,13 +1,13 @@
 const Discord = require('discord.js');
-const ytdl = require('ytdl-core');
-const {
-	prefix,
-	token,
-} = require('./config.json');
+const fs = require('fs');
+const {prefix,token} = require('./config.json');
+const musicIds = require('./musicIds.json');
+
 const client = new Discord.Client();
 
 const mp3Extension = ".mp3";
-const muteFileName = "mute";
+const muteFileName = "./mute";
+const musicDirectory = "./musics/"
 const argErrorMessage = "File not found, please retry and with another argument";
 const helpMessage = "The following commands are available : \n"
 					+ "**!stop** : Stop playing music\n"
@@ -26,9 +26,28 @@ client.once('disconnect', () => {
  console.log('Disconnect!');
 });
 
-//TODO: commande qui donne des infos sur les musiques possibles
+//TODO: gerer l'ajout de nouvelles musiques
 //TODO: commande qui joue une musique random parmi un theme
-//TODO: bug - message d'erreur ne s'affiche pas quand la musique n'est pas trouvée
+
+
+//read musics in directory and give each of them an id
+fs.readdir("./musics/", (err, files) => {
+	let counter = 1;
+	files.forEach(file => {
+	    musicIds[counter] = file;
+	    counter++;
+	});
+	//write songs and their ids to file
+	fs.writeFile('./musicIds.json', JSON.stringify(musicIds), (err) => {
+    if (err) {
+        throw err;
+    }
+    console.log("Music's ids are saved!");
+	});
+});
+
+
+
 
 client.on('message', async message => {
 
@@ -41,17 +60,17 @@ client.on('message', async message => {
 
 	if (message.content.startsWith(`${prefix}play`)){
 		message.reply("Playing ...");
-		const args = getArg(message);
-		play(message,args+mp3Extension);
+		const arg = getArg(message);
+		play(message,arg);
 	}
 	if (message.content.startsWith(`${prefix}loop`)){
 		message.reply("Looping ...");
-		const args = getArg(message);
-		loop(message,args+mp3Extension);
+		const arg = getArg(message);
+		loop(message,arg);
 	}
 	if (message.content.startsWith(`${prefix}stop`)){
 		message.reply("Ok, I stop playing ...");
-		loop(message,muteFileName+mp3Extension);
+		stop(message);
 	}
 	if (message.content.startsWith(`${prefix}quit`)){
 		message.reply("Ok, I disconnect ...");
@@ -60,23 +79,44 @@ client.on('message', async message => {
 	if (message.content.startsWith(`${prefix}help`)){
 		message.reply(helpMessage);
 	}
+	if (message.content.startsWith(`${prefix}list`)){
+		list(message);
+	}
 })
 
 
 
+function list(message){
+	let messageList = "The following songs can be played : \n"
+	for (const [key, value] of Object.entries(musicIds)) {
+  		messageList += `**${key}** : ${value}\n`;
+	}
+	message.reply(messageList);
+}
 
-function play(message,title){
+function play(message,arg){
+	let music = musicDirectory+musicIds[arg];
 	message.member.voice.channel.join().then(VoiceConnection => {
-			VoiceConnection.play(title).on("finish", () => {VoiceConnection.disconnect()});
+			VoiceConnection.play(music).on("finish", () => {VoiceConnection.disconnect()});
     	}).catch(e => {
 			console.log(e);
 			message.channel.send(argErrorMessage);
     	})
 }
 
-function loop(message,title){
+function loop(message,arg){
+	let music = musicDirectory+musicIds[arg];
 	message.member.voice.channel.join().then(VoiceConnection => {
-			VoiceConnection.play(title).on("finish", () => {loop(message,title)});
+			VoiceConnection.play(title).on("finish", () => {loop(message,arg)});
+    	}).catch(e => {
+			console.log(e);
+			message.channel.send(argErrorMessage);
+    	})
+}
+
+function stop(message){
+	message.member.voice.channel.join().then(VoiceConnection => {
+			VoiceConnection.play(muteFileName+mp3Extension).on("finish", () => {stop(message)});
     	}).catch(e => {
 			console.log(e);
 			message.channel.send(argErrorMessage);
