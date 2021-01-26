@@ -26,7 +26,7 @@ client.once('disconnect', () => {
 //TODO: commande qui joue une musique random parmi un theme
 //TODO: help command
 //TODO: bug - message d'erreur ne s'affiche pas quand la musique n'est pas trouvée
-
+//TODO: !quit command qui fait déconnecter le bot
 
 client.on('message', async message => {
 
@@ -51,6 +51,10 @@ client.on('message', async message => {
 		message.reply("Ok, I stop playing ...");
 		loop(message,muteFileName+mp3Extension);
 	}
+	if (message.content.startsWith(`${prefix}quit`)){
+		message.reply("Ok, I disconnect ...");
+		disconnect(message);
+	}
 })
 
 
@@ -72,6 +76,12 @@ function loop(message,title){
 			console.log(e);
 			message.channel.send(argErrorMessage);
     	})
+}
+
+function disconnect(message){
+	message.member.voice.channel.join().then(VoiceConnection => {
+			VoiceConnection.disconnect()
+    	}).catch(e => console.log(e))
 }
 
 function getArg(message){
