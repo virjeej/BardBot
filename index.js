@@ -1,14 +1,34 @@
 const Discord = require('discord.js');
-const ytdl = require('ytdl-core');
-const {
-	prefix,
-	token,
-} = require('./config.json');
+const fs = require('fs');
+
+const musicIdsFileName = './musicIds.json';
+const themesFileName = './themes.json';
+
+const {prefix,token} = require('./config.json');
+const musicIds = require(musicIdsFileName);
+const themes = require(themesFileName);
+
+const emptyObject = {};
 const client = new Discord.Client();
 
 const mp3Extension = ".mp3";
-const muteFileName = "mute";
+const muteFileName = "./mute";
+const musicDirectory = "./musics/"
+
 const argErrorMessage = "File not found, please retry and with another argument";
+const helpMessage = "The following commands are available : \n"
+					+ "**!help** : Displays command list and usage\n"
+					+ "**!listSongs** : Displays available songs and ids\n"
+					+ "**!play <id>** : Plays the song corresponding to the specified id (once)\n"
+					+ "**!loop <id>** : Loops the song corresponding to the specified id\n"
+					+ "**!clearIds** : Clears songIds file\n"
+					+ "**!listThemes** : Displays available themes\n"
+					+ "**!newTheme <theme name>** : Creates a new theme\n"
+					+ "**!addTheme <song id> <theme name>** : Adds the song to the specified theme\n"
+					+ "**!loopTheme <theme name>** : Loops a random song from the specified theme\n"
+					+ "**!stop** : Stop playing music\n"
+					+ "**!quit** : Disconnects the bot"
+					;
 
 
 client.login(token);
@@ -22,11 +42,23 @@ client.once('disconnect', () => {
  console.log('Disconnect!');
 });
 
-//TODO: commande qui donne des infos sur les musiques possibles
-//TODO: commande qui joue une musique random parmi un theme
-//TODO: help command
-//TODO: bug - message d'erreur ne s'affiche pas quand la musique n'est pas trouvée
+//TODO : lister les musiques d'un theme en particulier
 
+//read musics in directory and give each of them an id
+fs.readdir("./musics/", (err, files) => {
+	let counter = 1;
+	files.forEach(file => {
+	    musicIds[counter] = file;
+	    counter++;
+	});
+	//write songs and their ids to file
+	fs.writeFile(musicIdsFileName, JSON.stringify(musicIds, null, "\t"), (err) => {
+    if (err) {
+        throw err;
+    }
+    console.log("Music's ids are saved!");
+	});
+});
 
 client.on('message', async message => {
 
@@ -36,46 +68,173 @@ client.on('message', async message => {
 	if (message.content.startsWith(`${prefix}kobrok`)){
 		message.channel.send("Kobrok is not so cleaver and clearly not powerful! Also really small! :heart_eyes:");
 	}
-
+	
 	if (message.content.startsWith(`${prefix}play`)){
-		message.reply("Playing ...");
-		const args = getArg(message);
-		play(message,args+mp3Extension);
-	}
-	if (message.content.startsWith(`${prefix}loop`)){
-		message.reply("Looping ...");
-		const args = getArg(message);
-		loop(message,args+mp3Extension);
+		const arg = getArg(message);
+		play(message,arg);
 	}
 	if (message.content.startsWith(`${prefix}stop`)){
 		message.reply("Ok, I stop playing ...");
-		loop(message,muteFileName+mp3Extension);
+		stop(message);
+	}
+	if (message.content.startsWith(`${prefix}quit`)){
+		message.reply("Ok, I disconnect ...");
+		disconnect(message);
+	}
+	if (message.content.startsWith(`${prefix}help`)){
+		message.reply(helpMessage);
+	}
+	if (message.content.startsWith(`${prefix}listSongs`)){
+		listSongs(message);
+	}
+	if (message.content.startsWith(`${prefix}listThemes`)){
+		listThemes(message);
+	}
+	if (message.content.startsWith(`${prefix}clearIds`)){
+		clearIds();
+	}
+	if (message.content.startsWith(`${prefix}newTheme`)){
+		const arg = getArg(message);
+		newTheme(message,arg);
+	}
+	if (message.content.startsWith(`${prefix}addTheme`)){
+		addTheme(message);
+	}
+	if (message.content.startsWith(`${prefix}loopTheme`)){
+		const arg = getArg(message);
+		loopTheme(message,arg);
+	}else if (message.content.startsWith(`${prefix}loop`)){
+		const arg = getArg(message);
+		loop(message,arg);
 	}
 })
 
 
 
+function listSongs(message){
+	let messageList = "The following songs can be played : \n"
+	for (const [key, value] of Object.entries(musicIds)) {
+  		messageList += `**${key}** : ${value}\n`;
+	}
+	message.reply(messageList);
+}
 
-function play(message,title){
+function listThemes(message){
+	let messageList = "The following themes are available : \n"
+	for (const [key, value] of Object.entries(themes)) {
+  		messageList += `**${key}**\n`;
+	}
+	message.reply(messageList);
+}
+
+function play(message,arg){
+	let music = musicDirectory+musicIds[arg];
+	message.reply("Playing "+musicIds[arg]);
 	message.member.voice.channel.join().then(VoiceConnection => {
-			VoiceConnection.play(title).on("finish", () => {VoiceConnection.disconnect()});
+			VoiceConnection.play(music).on("finish", () => {VoiceConnection.disconnect()});
     	}).catch(e => {
 			console.log(e);
 			message.channel.send(argErrorMessage);
     	})
 }
 
-function loop(message,title){
+function loop(message,arg){
+	let music = musicDirectory+musicIds[arg];
+	message.reply("Looping "+musicIds[arg]);
 	message.member.voice.channel.join().then(VoiceConnection => {
-			VoiceConnection.play(title).on("finish", () => {loop(message,title)});
+			VoiceConnection.play(music).on("finish", () => {loop(message,arg)});
     	}).catch(e => {
 			console.log(e);
 			message.channel.send(argErrorMessage);
     	})
+}
+
+function stop(message){
+	message.member.voice.channel.join().then(VoiceConnection => {
+			VoiceConnection.play(muteFileName+mp3Extension).on("finish", () => {stop(message)});
+    	}).catch(e => {
+			console.log(e);
+			message.channel.send(argErrorMessage);
+    	})
+}
+
+function disconnect(message){
+	message.member.voice.channel.join().then(VoiceConnection => {
+			VoiceConnection.disconnect()
+    	}).catch(e => console.log(e))
+}
+
+function clearIds(message){
+	fs.writeFile(musicIdsFileName,JSON.stringify(emptyObject, null, "\t"), (err) => {
+    if (err) {
+        throw err;
+    }
+    message.reply("Ids are cleared");
+	});
+}
+
+function newTheme(message,arg){
+	if(themes.hasOwnProperty(arg)){
+		message.reply("This theme already exists :cry:")
+	}else{
+		themes[arg] = [];
+		fs.writeFile(themesFileName,JSON.stringify(themes, null, "\t"), (err) => {
+    	if (err) {
+        	throw err;
+    	}
+    	message.reply("New theme : "+arg)
+		});
+	}
+}
+
+function addTheme(message){
+	const arg1 = message.content.slice(prefix.length).trim().split(' ')[1];
+	const arg2 = message.content.slice(prefix.length).trim().split(' ')[2];
+	if(themes.hasOwnProperty(arg2)){
+		if(!themes[arg2].includes(musicIds[arg1])){
+			themes[arg2].push(musicIds[arg1]);
+			fs.writeFile(themesFileName,JSON.stringify(themes, null, "\t"), (err) => {
+	    	if (err) {
+	        	throw err;
+	    	}
+	    	message.reply(musicIds[arg1]+" added to theme "+arg2)
+			});
+		}else{
+			message.reply("This song already belongs to theme :cry:")
+		}
+	}else{
+		message.reply("This theme does not exist :cry:")
+	}
+}
+
+function loopTheme(message,arg){
+	if(themes.hasOwnProperty(arg)){
+		let songs = themes[arg];
+		let songIds = [];
+		songs.forEach(song => {
+			let songId = getKeyByValue(musicIds,song);
+			if(songId != null){
+				songIds.push(songId);
+			}
+		});
+		if(songIds.length > 0){
+			let random = Math.floor(Math.random() * songIds.length);
+			let randomMusicId = songIds[random];
+			loop(message,randomMusicId);
+		}else{
+			message.reply("Didn't find any music to play :cry:")
+		}
+	}else{
+		message.reply("This theme does not exist :cry:")
+	}
 }
 
 function getArg(message){
 	const arg = message.content.slice(prefix.length).trim().split(' ')[1];
 	return arg;
+}
+
+function getKeyByValue(object, value) {
+  return Object.keys(object).find(key => object[key] === value);
 }
 
