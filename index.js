@@ -17,6 +17,15 @@ const musicDirectory = "./musics/"
 
 const argErrorMessage = "File not found, please retry and with another argument";
 const helpMessage = "The following commands are available : \n"
+					+ "**!help** : Displays command list and usage\n"
+					+ "**!listSongs** : Displays available songs and ids\n"
+					+ "**!play <id>** : Plays the song corresponding to the specified id (once)\n"
+					+ "**!loop <id>** : Loops the song corresponding to the specified id\n"
+					+ "**!clearIds** : Clears songIds file\n"
+					+ "**!listThemes** : Displays available themes\n"
+					+ "**!newTheme <theme name>** : Creates a new theme\n"
+					+ "**!addTheme <song id> <theme name>** : Adds the song to the specified theme\n"
+					+ "**!loopTheme <theme name>** : Loops a random song from the specified theme\n"
 					+ "**!stop** : Stop playing music\n"
 					+ "**!quit** : Disconnects the bot"
 					;
@@ -33,8 +42,7 @@ client.once('disconnect', () => {
  console.log('Disconnect!');
 });
 
-//TODO: gerer l'ajout de nouvelles musiques
-//TODO: commande qui joue une musique random parmi un theme
+//TODO : lister les musiques d'un theme en particulier
 
 //read musics in directory and give each of them an id
 fs.readdir("./musics/", (err, files) => {
@@ -52,9 +60,6 @@ fs.readdir("./musics/", (err, files) => {
 	});
 });
 
-
-
-
 client.on('message', async message => {
 
 	if (message.author.bot) return;
@@ -63,7 +68,7 @@ client.on('message', async message => {
 	if (message.content.startsWith(`${prefix}kobrok`)){
 		message.channel.send("Kobrok is so clever and powerful! Also really handsome! :heart_eyes:");
 	}
-
+	
 	if (message.content.startsWith(`${prefix}play`)){
 		const arg = getArg(message);
 		play(message,arg);
@@ -79,8 +84,11 @@ client.on('message', async message => {
 	if (message.content.startsWith(`${prefix}help`)){
 		message.reply(helpMessage);
 	}
-	if (message.content.startsWith(`${prefix}list`)){
-		list(message);
+	if (message.content.startsWith(`${prefix}listSongs`)){
+		listSongs(message);
+	}
+	if (message.content.startsWith(`${prefix}listThemes`)){
+		listThemes(message);
 	}
 	if (message.content.startsWith(`${prefix}clearIds`)){
 		clearIds();
@@ -103,10 +111,18 @@ client.on('message', async message => {
 
 
 
-function list(message){
+function listSongs(message){
 	let messageList = "The following songs can be played : \n"
 	for (const [key, value] of Object.entries(musicIds)) {
   		messageList += `**${key}** : ${value}\n`;
+	}
+	message.reply(messageList);
+}
+
+function listThemes(message){
+	let messageList = "The following themes are available : \n"
+	for (const [key, value] of Object.entries(themes)) {
+  		messageList += `**${key}**\n`;
 	}
 	message.reply(messageList);
 }
