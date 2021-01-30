@@ -1,5 +1,6 @@
 const Discord = require('discord.js');
 const fs = require('fs');
+const https = require('https');
 
 const musicIdsFileName = './musicIds.json';
 const themesFileName = './themes.json';
@@ -60,8 +61,17 @@ fs.readdir("./musics/", (err, files) => {
 
 client.on('message', async message => {
 
-	if (message.author.bot) return;
-  	if (!message.content.startsWith(prefix)) return;
+	if (message.author.bot){
+		if(message.author.username == "BardBot"){
+			console.log("[BotMessageLog] " + message.author.username + " : " + message.content);
+		}
+		return;
+	}
+  	if (!message.content.startsWith(prefix)){
+  		return;
+  	} else {
+  		console.log("[CommandsLog] " + message.author.username + " : " + message.content);
+  	}
 
 	if (message.content.startsWith(`${prefix}kobrok`)){
 		message.channel.send("Kobrok is so clever and powerful! Also really handsome! :heart_eyes:");
@@ -98,7 +108,12 @@ client.on('message', async message => {
 	if (message.content.startsWith(`${prefix}loopTheme`)){
 		const arg = getArg(message);
 		loopTheme(message,arg);
-	}else if (message.content.startsWith(`${prefix}loop`)){
+	}
+	if (message.content.startsWith(`${prefix}upload`)){
+		const arg = getArg(message);
+		upload(message);
+	}
+	else if (message.content.startsWith(`${prefix}loop`)){
 		const arg = getArg(message);
 		message.reply("Looping "+musicIds[arg]);
 		loop(message,arg);
@@ -221,6 +236,24 @@ function loopTheme(message,arg){
 	}
 }
 
+
+function upload(message){
+	if (message.attachments) {
+		message.attachments.forEach(function(attachment){
+			let attachmentName = attachment.name
+			if(attachmentName.endsWith(mp3Extension)){
+				console.log("uploading file " + attachmentName);
+				download(attachment.url,musicDirectory + "/" + attachmentName ,function(){
+            		message.reply(attachmentName + " uploaded succesfully")
+            	});
+			} else {
+				message.reply("only mp3 files are supported")
+			}
+			
+		})
+    }
+}
+
 function getArg(message){
 	const arg = message.content.slice(prefix.length).trim().split(' ')[1];
 	return arg;
@@ -230,3 +263,15 @@ function getKeyByValue(object, value) {
   return Object.keys(object).find(key => object[key] === value);
 }
 
+function download(url, dest, cb) {
+  var file = fs.createWriteStream(dest);
+  var request = https.get(url, function(response) {
+    response.pipe(file);
+    file.on('finish', function() {
+      file.close(cb);  // close() is async, call cb after close completes.
+    });
+  }).on('error', function(err) { // Handle errors
+    fs.unlink(dest); // Delete the file async. (But we don't check the result)
+    if (cb) cb(err.message);
+  });
+};
