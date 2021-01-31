@@ -1,6 +1,12 @@
 const Discord = require('discord.js');
 const fs = require('fs');
 const https = require('https');
+const youtubedl = require('ytdl-core');
+const ffmpeg = require('fluent-ffmpeg');
+let pathToFfmpeg = require('ffmpeg-static');
+const YoutubeMp3Downloader = require("youtube-mp3-downloader");
+
+
 
 const musicIdsFileName = './musicIds.json';
 const themesFileName = './themes.json';
@@ -16,6 +22,15 @@ const mp3Extension = ".mp3";
 const muteFileName = "./mute";
 const musicDirectory = "./musics/"
 
+const downloader = new YoutubeMp3Downloader({
+    "ffmpegPath": pathToFfmpeg,             // FFmpeg binary location
+    "outputPath": musicDirectory,    // Output file location (default: the home directory)
+    "youtubeVideoQuality": "highestaudio",  // Desired video quality (default: highestaudio)
+    "queueParallelism": 2,                  // Download parallelism (default: 1)
+    "progressTimeout": 2000,                // Interval in ms for the progress reports (default: 1000)
+    "allowWebm": false                      // Enable download from WebM sources (default: false)
+});
+
 const argErrorMessage = "File not found, please retry and with another argument";
 const helpMessage = "The following commands are available : \n"
 					+ "**!bardHelp** : Displays command list and usage\n"
@@ -26,6 +41,8 @@ const helpMessage = "The following commands are available : \n"
 					+ "**!newTheme <theme name>** : Creates a new theme\n"
 					+ "**!addTheme <song id> <theme name>** : Adds the song to the specified theme\n"
 					+ "**!loopTheme <theme name>** : Loops a random song from the specified theme\n"
+					+ "**!upload** : upload attachments\n"
+					+ "**!upload <youtubeVideoId>** : upload youtube video as mp3\n"
 					+ "**!stop** : Stop playing music\n"
 					+ "**!quit** : Disconnects the bot"
 					;
@@ -44,20 +61,25 @@ client.once('disconnect', () => {
 //TODO : lister les musiques d'un theme en particulier
 
 //read musics in directory and give each of them an id
-fs.readdir("./musics/", (err, files) => {
-	let counter = 1;
-	files.forEach(file => {
-	    musicIds[counter] = file;
-	    counter++;
+function listMusics(){
+	fs.readdir("./musics/", (err, files) => {
+		let counter = 1;
+		files.forEach(file => {
+		    musicIds[counter] = file;
+		    counter++;
+		});
+		//write songs and their ids to file
+		fs.writeFile(musicIdsFileName, JSON.stringify(musicIds, null, "\t"), (err) => {
+	    	if (err) {
+	        	throw err;
+	    	}
+    		console.log("Music's ids are saved!");
+		});
 	});
-	//write songs and their ids to file
-	fs.writeFile(musicIdsFileName, JSON.stringify(musicIds, null, "\t"), (err) => {
-    if (err) {
-        throw err;
-    }
-    console.log("Music's ids are saved!");
-	});
-});
+}
+
+listMusics();
+
 
 client.on('message', async message => {
 
@@ -111,7 +133,7 @@ client.on('message', async message => {
 	}
 	if (message.content.startsWith(`${prefix}upload`)){
 		const arg = getArg(message);
-		upload(message);
+		upload(message,arg);
 	}
 	else if (message.content.startsWith(`${prefix}loop`)){
 		const arg = getArg(message);
@@ -237,21 +259,38 @@ function loopTheme(message,arg){
 }
 
 
-function upload(message){
-	if (message.attachments) {
+function upload(message,arg){
+
+	if(arg){
+		downloader.download(arg);
+		downloader.on("finished", function(err, data){
+			message.reply(data.videoTitle + " uploaded succesfully");
+            listMusics();
+		});
+	}
+
+	//first check attachments
+	else if (message.attachments.size > 0) {
+
 		message.attachments.forEach(function(attachment){
 			let attachmentName = attachment.name
 			if(attachmentName.endsWith(mp3Extension)){
 				console.log("uploading file " + attachmentName);
 				download(attachment.url,musicDirectory + "/" + attachmentName ,function(){
-            		message.reply(attachmentName + " uploaded succesfully")
+            		message.reply(attachmentName + " uploaded succesfully");
+            		listMusics();
             	});
 			} else {
 				message.reply("only mp3 files are supported")
 			}
-			
 		})
     }
+
+    //next check if url in args
+     else {
+    	message.reply("attachment or video id required")
+    }
+
 }
 
 function getArg(message){
