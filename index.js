@@ -2,11 +2,8 @@ const Discord = require('discord.js');
 const fs = require('fs');
 const https = require('https');
 const youtubedl = require('ytdl-core');
-const ffmpeg = require('fluent-ffmpeg');
 let pathToFfmpeg = require('ffmpeg-static');
 const YoutubeMp3Downloader = require("youtube-mp3-downloader");
-
-
 
 const musicIdsFileName = './musicIds.json';
 const themesFileName = './themes.json';
