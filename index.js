@@ -55,7 +55,6 @@ client.once('disconnect', () => {
  console.log('Disconnect!');
 });
 
-//TODO : lister les musiques d'un theme en particulier
 
 //read musics in directory and give each of them an id
 function listMusics(){
@@ -127,6 +126,10 @@ client.on('message', async message => {
 	}
 	if (message.content.startsWith(`${prefix}addTheme`)){
 		addTheme(message);
+	}
+	if (message.content.startsWith(`${prefix}detailTheme`)){
+		const arg = getArg(message);
+		detailTheme(message,arg);
 	}
 	if (message.content.startsWith(`${prefix}deleteTheme`)){
 		const arg = getArg(message);
@@ -239,6 +242,21 @@ function addTheme(message){
 		}else{
 			message.reply("This song already belongs to theme :cry:")
 		}
+	}else{
+		message.reply("This theme does not exist :cry:")
+	}
+}
+
+function detailTheme(message,arg){
+	if(themes.hasOwnProperty(arg)){
+		let messageList = "The following songs belong to theme : "+arg+"\n"
+		themes[arg].forEach(song => {
+			let songId = getKeyByValue(musicIds,song);
+			if(songId != null){
+				messageList += `**${songId}** : ${song}\n`;
+			}
+		});
+		message.reply(messageList);
 	}else{
 		message.reply("This theme does not exist :cry:")
 	}
