@@ -61,16 +61,20 @@ client.once('disconnect', () => {
 function listMusics(){
 	fs.readdir("./musics/", (err, files) => {
 		let counter = 1;
-		files.forEach(file => {
-		    musicIds[counter] = file;
-		    counter++;
-		});
-		//write songs and their ids to file
-		fs.writeFile(musicIdsFileName, JSON.stringify(musicIds, null, "\t"), (err) => {
-	    	if (err) {
-	        	throw err;
-	    	}
-    		console.log("Music's ids are saved!");
+		files.forEach(directory => {
+		    fs.readdir("./musics/"+directory, (err, files) => {
+				files.forEach(file => {
+					let directorySong = directory+"/"+file
+				    musicIds[counter] = directorySong;
+		    		counter++;
+				});
+				fs.writeFile(musicIdsFileName, JSON.stringify(musicIds, null, "\t"), (err) => {
+			    	if (err) {
+			        	throw err;
+			    	}
+		    		console.log(directory+" music ids saved!");
+				});
+			});
 		});
 	});
 }
@@ -93,7 +97,7 @@ client.on('message', async message => {
   	}
 
 	if (message.content.startsWith(`${prefix}kobrok`)){
-		message.channel.send("Kobrok is so clever and powerful! Also really handsome! :heart_eyes:");
+		message.channel.send("Kobrok is so clever and clearly not powerful! Also really small! :heart_eyes:");
 	}
 
 	if (message.content.startsWith(`${prefix}play`)){
