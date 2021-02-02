@@ -93,7 +93,7 @@ client.on('message', async message => {
   	}
 
 	if (message.content.startsWith(`${prefix}kobrok`)){
-		message.channel.send("Kobrok is not so cleaver and clearly not powerful! Also really small! :heart_eyes:");
+		message.channel.send("Kobrok is so clever and powerful! Also really handsome! :heart_eyes:");
 	}
 
 	if (message.content.startsWith(`${prefix}play`)){
