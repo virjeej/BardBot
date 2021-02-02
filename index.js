@@ -128,6 +128,13 @@ client.on('message', async message => {
 	if (message.content.startsWith(`${prefix}addTheme`)){
 		addTheme(message);
 	}
+	if (message.content.startsWith(`${prefix}deleteTheme`)){
+		const arg = getArg(message);
+		deleteTheme(message,arg);
+	}
+	if (message.content.startsWith(`${prefix}deleteFromTheme`)){
+		deleteFromTheme(message);
+	}
 	if (message.content.startsWith(`${prefix}loopTheme`)){
 		const arg = getArg(message);
 		loopTheme(message,arg);
@@ -231,6 +238,41 @@ function addTheme(message){
 			});
 		}else{
 			message.reply("This song already belongs to theme :cry:")
+		}
+	}else{
+		message.reply("This theme does not exist :cry:")
+	}
+}
+
+function deleteTheme(message,arg){
+	if(themes.hasOwnProperty(arg)){
+		delete themes[arg]; 
+		fs.writeFile(themesFileName,JSON.stringify(themes, null, "\t"), (err) => {
+	    	if (err) {
+	        	throw err;
+    		}
+			message.reply(arg+" theme has been deleted")
+		});
+	}else{
+		message.reply("This theme does not exist :cry:")
+	}
+}
+
+function deleteFromTheme(message,arg){
+	const arg1 = message.content.slice(prefix.length).trim().split(' ')[1];
+	const arg2 = message.content.slice(prefix.length).trim().split(' ')[2];
+	if(themes.hasOwnProperty(arg2)){
+		if(themes[arg2].includes(musicIds[arg1])){
+			let updatedTheme = themes[arg2].filter(e => e !== musicIds[arg1]);
+			themes[arg2] = updatedTheme;
+			fs.writeFile(themesFileName,JSON.stringify(themes, null, "\t"), (err) => {
+		    	if (err) {
+		        	throw err;
+	    		}
+				message.reply(musicIds[arg1]+" has been deleted from "+arg2);
+			});
+		}else{
+			message.reply("This song doesn't belong to this theme :cry:")
 		}
 	}else{
 		message.reply("This theme does not exist :cry:")
