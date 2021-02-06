@@ -9,7 +9,6 @@ const musicIdsFileName = './musicIds.json';
 const themesFileName = './themes.json';
 
 const {prefix,token} = require('./config.json');
-const musicIds = require(musicIdsFileName);
 const themes = require(themesFileName);
 
 const emptyObject = {};
@@ -19,27 +18,19 @@ const mp3Extension = ".mp3";
 const muteFileName = "./mute";
 const musicDirectory = "./musics/"
 
-const downloader = new YoutubeMp3Downloader({
-    "ffmpegPath": pathToFfmpeg,             // FFmpeg binary location
-    "outputPath": musicDirectory,    // Output file location (default: the home directory)
-    "youtubeVideoQuality": "highestaudio",  // Desired video quality (default: highestaudio)
-    "queueParallelism": 2,                  // Download parallelism (default: 1)
-    "progressTimeout": 2000,                // Interval in ms for the progress reports (default: 1000)
-    "allowWebm": false                      // Enable download from WebM sources (default: false)
-});
-
 const argErrorMessage = "File not found, please retry and with another argument";
 const helpMessage = "The following commands are available : \n"
 					+ "**!bardHelp** : Displays command list and usage\n"
-					+ "**!listSongs** : Displays available songs and ids\n"
+					+ "**!listWorlds ** : List available worlds \n"
+					+ "**!listSongs (world) ** : List available songs and ids for all world or specified world\n"
 					+ "**!play <id>** : Plays the song corresponding to the specified id (once)\n"
 					+ "**!loop <id>** : Loops the song corresponding to the specified id\n"
 					+ "**!listThemes** : Displays available themes\n"
 					+ "**!newTheme <theme name>** : Creates a new theme\n"
 					+ "**!addTheme <song id> <theme name>** : Adds the song to the specified theme\n"
 					+ "**!loopTheme <theme name>** : Loops a random song from the specified theme\n"
-					+ "**!upload** : upload attachments\n"
-					+ "**!upload <youtubeVideoId>** : upload youtube video as mp3\n"
+					+ "**!upload <world>** : upload attachments to world\n"
+					+ "**!upload <world> <youtubeVideoId>** : upload youtube video as mp3 to world\n"
 					+ "**!stop** : Stop playing music\n"
 					+ "**!quit** : Disconnects the bot"
 					;
@@ -55,25 +46,26 @@ client.once('disconnect', () => {
  console.log('Disconnect!');
 });
 
+//list of worlds
+let worlds = []
+let musicIds = []
+
 
 //read musics in directory and give each of them an id
 function listMusics(){
 	fs.readdir("./musics/", (err, files) => {
 		let counter = 1;
 		files.forEach(directory => {
-		    fs.readdir("./musics/"+directory, (err, files) => {
-				files.forEach(file => {
-					let directorySong = directory+"/"+file
-				    musicIds[counter] = directorySong;
-		    		counter++;
+			if (!directory.endsWith(".mp3")){
+				fs.readdir("./musics/"+directory, (err, files) => {
+					worlds.push(directory)
+					files.forEach(file => {
+						let directorySong = directory+"/"+file
+						musicIds[counter] = directorySong;
+						counter++;
+					});
 				});
-				fs.writeFile(musicIdsFileName, JSON.stringify(musicIds, null, "\t"), (err) => {
-			    	if (err) {
-			        	throw err;
-			    	}
-		    		console.log(directory+" music ids saved!");
-				});
-			});
+			}
 		});
 	});
 }
@@ -114,8 +106,12 @@ client.on('message', async message => {
 	if (message.content.startsWith(`${prefix}bardHelp`)){
 		message.reply(helpMessage);
 	}
+	if (message.content.startsWith(`${prefix}listWorlds`)){
+		listWorlds(message);
+	}
 	if (message.content.startsWith(`${prefix}listSongs`)){
-		listSongs(message);
+		const arg = getArg(message);
+		listSongs(message, arg);
 	}
 	if (message.content.startsWith(`${prefix}listThemes`)){
 		listThemes(message);
@@ -144,7 +140,8 @@ client.on('message', async message => {
 	}
 	if (message.content.startsWith(`${prefix}upload`)){
 		const arg = getArg(message);
-		upload(message,arg);
+		const arg2 = getArg2(message);
+		upload(message,arg, arg2);
 	}
 	else if (message.content.startsWith(`${prefix}loop`)){
 		const arg = getArg(message);
@@ -155,11 +152,47 @@ client.on('message', async message => {
 
 
 
-function listSongs(message){
+function listSongs(message, arg){
 	let messageList = "The following songs can be played : \n"
+
+	let world = "";
+
 	for (const [key, value] of Object.entries(musicIds)) {
-  		messageList += `**${key}** : ${value}\n`;
+
+		console.log(arg);
+
+		if(!arg || (arg && value.split("/")[0] == arg)	){
+			if (value.split("/")[0] != world){
+				world = value.split("/")[0]
+				messageList += `\n**${world} :**\n`;
+			}
+	
+			  messageList += `**${key}** : ${value.split("/")[1]}\n`;
+		}
 	}
+
+	if(messageList.length < 40){
+		if(worlds.includes(arg)){
+			message.reply(`the world ${arg} contains no songs`)
+		} else {
+			messageList = "";
+			worlds.forEach(world => {
+				messageList += " " + world;
+			})
+			message.reply(`${arg} is not a valid world (worlds :${messageList})`);
+		}
+		
+	} else {
+		message.reply(messageList);
+	}
+	
+}
+
+function listWorlds(message){
+	let messageList = "The following world exists : \n"
+	worlds.forEach(world => {
+		messageList =+ world + " ";
+	})
 	message.reply(messageList);
 }
 
@@ -320,43 +353,71 @@ function loopTheme(message,arg){
 }
 
 
-function upload(message,arg){
+function upload(message,arg, arg2){
 
 	if(arg){
-		downloader.download(arg);
-		downloader.on("finished", function(err, data){
-			message.reply(data.videoTitle + " uploaded succesfully");
-            listMusics();
-		});
+		if(!worlds.includes(arg)){
+			messageList = "";
+			worlds.forEach(world => {
+				messageList += " " + world;
+			})
+			message.reply(`${arg} is not a valid world (worlds :${messageList})`);
+			return;
+		}
+	
+
+		if(arg2){
+
+			let downloader = new YoutubeMp3Downloader({
+				"ffmpegPath": pathToFfmpeg,             	// FFmpeg binary location
+				"outputPath": musicDirectory + arg + "/",   // Output file location (default: the home directory)
+				"youtubeVideoQuality": "highestaudio",  	// Desired video quality (default: highestaudio)
+				"queueParallelism": 2,                  	// Download parallelism (default: 1)
+				"progressTimeout": 2000,                	// Interval in ms for the progress reports (default: 1000)
+				"allowWebm": false                      	// Enable download from WebM sources (default: false)
+			});
+
+			downloader.download(arg2);
+			downloader.on("finished", function(err, data){
+				message.reply(data.videoTitle + " uploaded succesfully");
+				listMusics();
+			});
+		}
+
+		//first check attachments
+		else if (message.attachments.size > 0) {
+
+			message.attachments.forEach(function(attachment){
+				let attachmentName = attachment.name
+				if(attachmentName.endsWith(mp3Extension)){
+					console.log("uploading file " + attachmentName);
+					download(attachment.url,musicDirectory + "/" + arg  + "/" + attachmentName ,function(){
+						message.reply(attachmentName + " uploaded succesfully");
+						listMusics();
+					});
+				} else {
+					message.reply("only mp3 files are supported")
+				}
+			})
+		}
+
+		//next check if url in args
+		else {
+			message.reply("attachment or video id required")
+		}
+	} else {
+		message.reply("missing parameter <world>")
 	}
-
-	//first check attachments
-	else if (message.attachments.size > 0) {
-
-		message.attachments.forEach(function(attachment){
-			let attachmentName = attachment.name
-			if(attachmentName.endsWith(mp3Extension)){
-				console.log("uploading file " + attachmentName);
-				download(attachment.url,musicDirectory + "/" + attachmentName ,function(){
-            		message.reply(attachmentName + " uploaded succesfully");
-            		listMusics();
-            	});
-			} else {
-				message.reply("only mp3 files are supported")
-			}
-		})
-    }
-
-    //next check if url in args
-     else {
-    	message.reply("attachment or video id required")
-    }
-
 }
 
 function getArg(message){
 	const arg = message.content.slice(prefix.length).trim().split(' ')[1];
 	return arg;
+}
+
+function getArg2(message){
+	const arg2 = message.content.slice(prefix.length).trim().split(' ')[2];
+	return arg2;
 }
 
 function getKeyByValue(object, value) {
