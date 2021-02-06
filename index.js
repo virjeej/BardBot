@@ -195,7 +195,7 @@ function listSongs(message, arg){
 function listWorlds(message){
 	let messageList = "The following world exists : \n"
 	worlds.forEach(world => {
-		messageList =+ world + " ";
+		messageList += world + " ";
 	})
 	message.reply(messageList);
 }
