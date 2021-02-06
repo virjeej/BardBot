@@ -55,6 +55,7 @@ let musicIds = []
 
 //read musics in directory and give each of them an id
 function listMusics(){
+	worlds = [];
 	fs.readdir("./musics/", (err, files) => {
 		let counter = 1;
 		files.forEach(directory => {
@@ -117,6 +118,7 @@ client.on('message', async message => {
 	}
 	if (message.content.startsWith(`${prefix}resetSongList`)){
 		listMusics();
+		message.reply("song list updated")
 	}
 	if (message.content.startsWith(`${prefix}listThemes`)){
 		listThemes(message);
