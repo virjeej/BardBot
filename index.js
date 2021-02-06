@@ -32,6 +32,7 @@ const helpMessage = "The following commands are available : \n"
 					+ "**!upload <world>** : upload attachments to world\n"
 					+ "**!upload <world> <youtubeVideoId>** : upload youtube video as mp3 to world\n"
 					+ "**!stop** : Stop playing music\n"
+					+ "**!resetSongList** : met à jour la liste des musiques"
 					+ "**!quit** : Disconnects the bot"
 					;
 
@@ -112,6 +113,9 @@ client.on('message', async message => {
 	if (message.content.startsWith(`${prefix}listSongs`)){
 		const arg = getArg(message);
 		listSongs(message, arg);
+	}
+	if (message.content.startsWith(`${prefix}resetSongList`)){
+		listMusics():
 	}
 	if (message.content.startsWith(`${prefix}listThemes`)){
 		listThemes(message);
