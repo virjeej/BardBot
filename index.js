@@ -115,7 +115,7 @@ client.on('message', async message => {
 		listSongs(message, arg);
 	}
 	if (message.content.startsWith(`${prefix}resetSongList`)){
-		listMusics():
+		listMusics();
 	}
 	if (message.content.startsWith(`${prefix}listThemes`)){
 		listThemes(message);
