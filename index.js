@@ -22,12 +22,13 @@ const argErrorMessage = "File not found, please retry and with another argument"
 const helpMessage = "The following commands are available : \n"
 					+ "**!bardHelp** : Displays command list and usage\n"
 					+ "**!listWorlds ** : List available worlds \n"
-					+ "**!listSongs (world) ** : List available songs and ids for all world or specified world\n"
+					+ "**!listSongs <world> ** : List available songs and ids for all world or specified world\n"
 					+ "**!play <id>** : Plays the song corresponding to the specified id (once)\n"
 					+ "**!loop <id>** : Loops the song corresponding to the specified id\n"
 					+ "**!listThemes** : Displays available themes\n"
 					+ "**!newTheme <theme name>** : Creates a new theme\n"
-					+ "**!addTheme <song id> <theme name>** : Adds the song to the specified theme\n"
+					+ "**!addTheme <theme name> <song id 1> <song id 2> ...** : Adds the specified song ids to the specified theme\n"
+					+ "**!detailTheme <theme name>** : Displays songs that belong to the specified theme\n"
 					+ "**!loopTheme <theme name>** : Loops a random song from the specified theme\n"
 					+ "**!upload <world>** : upload attachments to world\n"
 					+ "**!upload <world> <youtubeVideoId>** : upload youtube video as mp3 to world\n"
@@ -89,7 +90,7 @@ client.on('message', async message => {
   	}
 
 	if (message.content.startsWith(`${prefix}kobrok`)){
-		message.channel.send("Kobrok is so clever and clearly not powerful! Also really small! :heart_eyes:");
+		message.channel.send("Kobrok is so clever and powerful! Also really handsome! :heart_eyes:");
 	}
 
 	if (message.content.startsWith(`${prefix}play`)){
@@ -265,20 +266,26 @@ function newTheme(message,arg){
 }
 
 function addTheme(message){
-	const arg1 = message.content.slice(prefix.length).trim().split(' ')[1];
-	const arg2 = message.content.slice(prefix.length).trim().split(' ')[2];
-	if(themes.hasOwnProperty(arg2)){
-		if(!themes[arg2].includes(musicIds[arg1])){
-			themes[arg2].push(musicIds[arg1]);
-			fs.writeFile(themesFileName,JSON.stringify(themes, null, "\t"), (err) => {
-	    	if (err) {
-	        	throw err;
-	    	}
-	    	message.reply(musicIds[arg1]+" added to theme "+arg2)
-			});
-		}else{
-			message.reply("This song already belongs to theme :cry:")
+	const themeArg = message.content.slice(prefix.length).trim().split(' ')[1];
+	const songIds = message.content.slice(prefix.length).trim().split(' ');
+	if(themes.hasOwnProperty(themeArg)){
+		for(let i = 2 ; i < songIds.length ; i++){
+			let songIdArg = songIds[i];
+			if(!themes[themeArg].includes(musicIds[songIdArg])){
+				if(musicIds.hasOwnProperty(songIdArg)){
+					themes[themeArg].push(musicIds[songIdArg]);
+					fs.writeFile(themesFileName,JSON.stringify(themes, null, "\t"), (err) => {
+			    		if (err) {
+			        		throw err;
+			    		}
+			    		message.reply(musicIds[songIdArg]+" added to theme "+themeArg)
+					});	
+				}
+			}else{
+				message.reply("This song already belongs to theme :cry:")
+			}
 		}
+		
 	}else{
 		message.reply("This theme does not exist :cry:")
 	}
